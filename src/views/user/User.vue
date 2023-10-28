@@ -218,14 +218,6 @@ export default ({
             params: {
             }
         })
-        const roleListData = reactive({
-            url: common.roleList,
-            params: {
-                role_name: '',
-                page: 1,
-                limit: 10
-            }
-        })
 
         //更新角色
         const updateRef = ref()
@@ -246,7 +238,6 @@ export default ({
         const updatePWD = reactive({
             id: 0,
             username: '',
-            // oldPassword: '',
             newPassword: '',
             newPasswordTo: '',
         })
@@ -255,7 +246,6 @@ export default ({
             params: {
                 id: 0,
                 username: '',
-                oldPassword: '',
                 newPassword: '',
             }
         })
@@ -409,9 +399,8 @@ export default ({
             appLoading.value = true
             updatePWDData.params.id = updatePWD.id
             updatePWDData.params.username = updatePWD.username
-            // updatePWDData.params.oldPassword = updatePWD.oldPassword
             updatePWDData.params.newPassword = updatePWD.newPassword
-            httpClient.put(updatePWDData.url, updatePWDData.params)
+            httpClient.put(updatePWDData.url, updatePWD)
                 .then(res => {
                     message.success(res.msg)
                 })
