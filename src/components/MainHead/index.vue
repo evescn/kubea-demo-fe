@@ -147,7 +147,7 @@ export default ({
         const repoValue = ref('')
         const repoList = common.repoList
         // 环境
-        const urlEnvValue = ref('t1')
+        const urlEnvValue = ref('DevOPS')
         const urlEnvList = ref([])
 
         const urlEnvListData = reactive({

@@ -84,11 +84,11 @@
             :model="updatePWD"
             :labelCol="{style: {width: '30%'}}"
             :rules="rules">
-            <a-form-item
-                label="旧密码"
-                name="oldPassword">
-                <a-input-password v-model:value="updatePWD.oldPassword" placeholder="旧密码"></a-input-password>
-            </a-form-item>
+<!--            <a-form-item-->
+<!--                label="旧密码"-->
+<!--                name="oldPassword">-->
+<!--                <a-input-password v-model:value="updatePWD.oldPassword" placeholder="旧密码"></a-input-password>-->
+<!--            </a-form-item>-->
             <a-form-item
                 label="新密码"
                 name="newPassword">
@@ -218,6 +218,14 @@ export default ({
             params: {
             }
         })
+        const roleListData = reactive({
+            url: common.roleList,
+            params: {
+                role_name: '',
+                page: 1,
+                limit: 10
+            }
+        })
 
         //更新角色
         const updateRef = ref()
@@ -238,12 +246,12 @@ export default ({
         const updatePWD = reactive({
             id: 0,
             username: '',
-            oldPassword: '',
+            // oldPassword: '',
             newPassword: '',
             newPasswordTo: '',
         })
         const updatePWDData = reactive({
-            url: common.userUpdate,
+            url: common.userUpdateAdmin,
             params: {
                 id: 0,
                 username: '',
@@ -277,13 +285,13 @@ export default ({
         })
 
         // rules 规则
-        let validateOldPass = async (_rule, value) => {
-            if ( value.length < 6 ) {
-                return Promise.reject('密码长度低于 6 位数');
-            } else {
-                return Promise.resolve();
-            }
-        };
+        // let validateOldPass = async (_rule, value) => {
+        //     if ( value.length < 6 ) {
+        //         return Promise.reject('密码长度低于 6 位数');
+        //     } else {
+        //         return Promise.resolve();
+        //     }
+        // };
         let validateNewPass = async (_rule, value) => {
             if ( value.length < 6 ) {
                 return Promise.reject('密码长度低于 6 位数');
@@ -306,11 +314,11 @@ export default ({
             // required是否必填
             // trigger触发方式，change(有变化的时候做校验), blur(选中焦点取消时触发)
             // validator自定义验证的方法
-            oldPassword: [{
-                required: true,
-                validator: validateOldPass,
-                trigger: 'blur',
-            }],
+            // oldPassword: [{
+            //     required: true,
+            //     validator: validateOldPass,
+            //     trigger: 'blur',
+            // }],
             newPassword: [{
                 required: true,
                 validator: validateNewPass,
@@ -401,7 +409,7 @@ export default ({
             appLoading.value = true
             updatePWDData.params.id = updatePWD.id
             updatePWDData.params.username = updatePWD.username
-            updatePWDData.params.oldPassword = updatePWD.oldPassword
+            // updatePWDData.params.oldPassword = updatePWD.oldPassword
             updatePWDData.params.newPassword = updatePWD.newPassword
             httpClient.put(updatePWDData.url, updatePWDData.params)
                 .then(res => {

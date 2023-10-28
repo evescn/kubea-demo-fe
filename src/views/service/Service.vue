@@ -76,14 +76,12 @@
             </a-form-item>
             <a-form-item
                 label="用户名"
-                name="p_name"
-                :rules="[{ required: true, message: '请输入URL地址账号'}]">
+                name="p_name">
                 <a-input v-model:value="updateSvc.p_name"></a-input>
             </a-form-item>
             <a-form-item
                 label="密码"
-                name="p_password"
-                :rules="[{ required: true, message: '请输入URL地址密码'}]">
+                name="p_password">
                 <a-input v-model:value="updateSvc.p_password"></a-input>
             </a-form-item>
             <a-form-item
@@ -120,14 +118,12 @@
             </a-form-item>
             <a-form-item
                 label="用户名"
-                name="p_name"
-                :rules="[{ required: true, message: '请输入URL地址账号'}]">
+                name="p_name">
                 <a-input v-model:value="createSvc.p_name"></a-input>
             </a-form-item>
             <a-form-item
                 label="密码"
-                name="p_password"
-                :rules="[{ required: true, message: '请输入URL地址密码'}]">
+                name="p_password">
                 <a-input v-model:value="createSvc.p_password"></a-input>
             </a-form-item>
             <a-form-item
@@ -144,7 +140,7 @@
     </a-drawer>
 </template>
 <script>
-import {ref, reactive, createVNode, onMounted,} from 'vue'
+import {ref, reactive, createVNode,} from 'vue'
 import common from '@/config'
 import httpClient from '@/request'
 import {message, Modal} from 'ant-design-vue'

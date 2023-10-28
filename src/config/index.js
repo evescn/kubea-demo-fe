@@ -7,7 +7,7 @@
 // const baseHost = 'http://t1-kubea-demo.dayuan1997.com'
 // const wsHost = 'ws://10.0.0.101:28082'
 
-const baseHost = 'https://kubea.dayuan1997.com'
+const baseHost = 'http://kubea.dayuan1997.com'
 const wsHost = 'ws://kubea.dayuan1997.com'
 
 export default {
@@ -17,6 +17,7 @@ export default {
     userList: baseHost + '/api/user/list',
     userAdd: baseHost + '/api/user/add',
     userUpdate: baseHost + '/api/user/update',
+    userUpdateAdmin: baseHost + '/api/user/updateAdmin',
     userUpdateRole: baseHost + '/api/user/updateRole',
     userDel: baseHost + '/api/user/del',
     //角色管理

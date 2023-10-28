@@ -449,19 +449,19 @@ export default ({
         }
 
         // 刷新页面重新获取用户 role id 信息
-        async function getUserList() {
-            userListData.params.username = localStorage.getItem("username")
-            await httpClient.get(userListData.url, {params: userListData.params})
-                .then(res => {
-                    // 重新设置用户 role id，防止用户修改数据，获取管理员权限
-                    localStorage.setItem("role", res.data.items[0].role)
-                })
-                .catch(res => {
-                    message.error(res.msg)
-                })
-                .finally(() => {
-                })
-        }
+        // async function getUserList() {
+        //     userListData.params.username = localStorage.getItem("username")
+        //     await httpClient.get(userListData.url, {params: userListData.params})
+        //         .then(res => {
+        //             // 重新设置用户 role id，防止用户修改数据，获取管理员权限
+        //             localStorage.setItem("role", res.data.items[0].role)
+        //         })
+        //         .catch(res => {
+        //             message.error(res.msg)
+        //         })
+        //         .finally(() => {
+        //         })
+        // }
 
         //更新按钮
         async function formSubmit() {

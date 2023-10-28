@@ -52,9 +52,9 @@
         <a-form ref="updateRef" :model="updateEnv" :labelCol="{style: {width: '30%'}}">
             <a-form-item
                 label="环境"
-                name="env_name"
+                name="name"
                 :rules="[{ required: true, message: '请输入应用名'}]">
-                <a-input v-model:value="updateEnv.env_name"></a-input>
+                <a-input v-model:value="updateEnv.name"></a-input>
             </a-form-item>
             <a-form-item
                 label="描述"
@@ -78,9 +78,9 @@
         <a-form ref="createRef" :model="createEnv" :labelCol="{style: {width: '30%'}}">
             <a-form-item
                 label="环境"
-                name="env_name"
+                name="name"
                 :rules="[{ required: true, message: '请输入应用名'}]">
-                <a-input v-model:value="createEnv.env_name"></a-input>
+                <a-input v-model:value="createEnv.name"></a-input>
             </a-form-item>
             <a-form-item
                 label="描述"
@@ -154,7 +154,7 @@ export default ({
         const envListData = reactive({
             url: common.urlEnvList,
             params: {
-                env_name: '',
+                name: '',
                 page: 1,
                 limit: 10
             }
@@ -216,7 +216,7 @@ export default ({
 
         function getEnvList() {
             appLoading.value = true
-            envListData.params.env_name = searchValue.value
+            envListData.params.name = searchValue.value
             envListData.params.page = pagination.current
             envListData.params.limit = pagination.pageSize
             httpClient.get(envListData.url, {params: envListData.params})
@@ -240,7 +240,7 @@ export default ({
                     break
                 case "update":
                     updateEnv.id = row.id
-                    updateEnv.env_name = row.name
+                    updateEnv.name = row.name
                     updateEnv.description = row.description
                     updateDrawer.value = true
                     break
