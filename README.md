@@ -1,6 +1,6 @@
 # kubea-fe
 
-> k8s+cicd+内网url地址导航
+> k8s+cicd+内网url导航 前端
 
 ## 1. 服务镜像打包
 
