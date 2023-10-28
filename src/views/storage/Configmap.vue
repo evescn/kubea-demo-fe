@@ -3,20 +3,21 @@
         <MainHead
             searchDescribe="请输入"
             @searchChange="getSearchValue"
-            @dataList="getNamespaceList">
-        </MainHead>
+            namespace
+            @namespaceChange="getNamespaceValue"
+            @dataList="getConfigmapList"/>
         <!-- 表格数据 -->
         <a-card :bodyStyle="{padding: '10px'}">
             <a-table
                 style="font-size: 12px;"
                 :loading="appLoading"
                 :columns="columns"
-                :dataSource="namespaceList"
+                :dataSource="configmapList"
                 :pagination="pagination"
                 @change="handleTableChange">
                 <template #bodyCell="{ column, record }">
-                    <template v-if="column.dataIndex == 'name'">
-                        <span style="font-weight: bold">{{ record.metadata.name }}</span>
+                    <template v-if="column.dataIndex === 'name'">
+                        <span style="font-weight: bold;">{{ record.metadata.name }}</span>
                     </template>
                     <template v-if="column.dataIndex === 'labels'">
                         <div v-for="val, key in record.metadata.labels" :key="key">
@@ -28,16 +29,22 @@
                             </a-popover>
                         </div>
                     </template>
-                    <template v-if="column.dataIndex === 'status'">
-                        <span :class="[record.status.phase === 'Active' ? 'success-status' : 'error-status']">{{ record.status.phase }}</span>
+                    <template v-if="column.dataIndex === 'data'">
+                        <!-- <a-tag color="cyan">{{ record.data }}</a-tag> -->
+                        <a-popover
+                            :overlayStyle="{width:'520px'}">
+                            <template #content>
+                                <div style="width:500px;height:300px;word-break:break-all;overflow-y:auto;">{{ record.data }}</div>
+                            </template>
+                            <file-text-outlined style="font-size: 15px;" />
+                        </a-popover>
                     </template>
                     <template v-if="column.dataIndex == 'creationTimestamp'">
                         <a-tag color="gray">{{ timeTrans(record.metadata.creationTimestamp) }}</a-tag>
-                        <!-- <a-tag color="gray">{{ record.metadata.creationTimestamp }}</a-tag> -->
                     </template>
                     <template v-if="column.key === 'action'">
-                        <c-button class="namespace-button" type="primary" icon="form-outlined" @click="getNamespaceDetail(record)">YML</c-button>
-                        <c-button style="margin-bottom:5px;" class="namespace-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delNamespace)">删除</c-button>
+                        <c-button class="configmap-button" type="primary" icon="form-outlined" @click="getConfigmapDetail(record)">YML</c-button>
+                        <c-button style="margin-bottom:5px;" class="configmap-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delConfigmap)">删除</c-button>
                     </template>
                 </template>
             </a-table>
@@ -50,7 +57,7 @@
             width="945px"
             cancelText="取消"
             okText="更新"
-            @ok="updateNamespace">
+            @ok="updateConfigmap">
             <!-- codemirror 编辑器 -->
             <codemirror
                 :value="contentYaml"
@@ -66,23 +73,19 @@
 </template>
 
 <script>
-import { ref, reactive, createVNode } from 'vue'
-import common from '@/config'
-import httpClient from '@/request'
-import { message, Modal } from 'ant-design-vue'
-import json2yaml from 'json2yaml'
-import yaml2obj from 'js-yaml'
+import { createVNode, reactive, ref, toRefs } from 'vue';
+import httpClient from '@/request';
+import common from '@/config';
+import { message, Modal } from 'ant-design-vue';
+import yaml2obj from 'js-yaml';
+import json2yaml from 'json2yaml';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
-
-export default ({
+export default({
     setup() {
-        const searchValue = ref('')
-
-        //列表数据
-        const appLoading = ref(false)
+        //表结构
         const columns = ref([
             {
-                title: 'Namespace名',
+                title: 'Configmap名',
                 dataIndex: 'name'
             },
             {
@@ -90,8 +93,8 @@ export default ({
                 dataIndex: 'labels'
             },
             {
-                title: '状态',
-                dataIndex: 'status',
+                title: 'DATA',
+                dataIndex: 'data',
             },
             {
                 title: '创建时间',
@@ -104,6 +107,11 @@ export default ({
                 width: 200
             }
         ])
+        
+        //常用项
+        const appLoading = ref(false)
+        const searchValue = ref('')
+        const namespaceValue = ref('')
 
         //分页
         const pagination = reactive({
@@ -115,11 +123,11 @@ export default ({
             pageSizeOptions: ['10','20','50','100'],
             showTotal: total => `共 ${total} 条`
         })
-
-        //列表属性
-        const namespaceList = ref()
-        const namespaceListData = reactive({
-            url: common.k8sNamespaceList,
+        
+        //列表
+        const configmapList = ref([])
+        const configmapListData = reactive({
+            url: common.k8sConfigmapList,
             params: {
                 filter_name: '',
                 namespace: '',
@@ -128,23 +136,21 @@ export default ({
                 limit: 10
             }
         })
-
         //YAML详情
         const contentYaml = ref('')
         const yamlModel = ref(false)
         const cmOptions = common.cmOptions
-        const namespaceDetailData = reactive({
-            url: common.k8sNamespaceDetail,
+        const configmapData = reactive({
+            url: common.k8sConfigmapDetail,
             params: {
-                ds_name: '',
+                cm_name: '',
                 namespace: '',
                 cluster: ''
             }
         })
-
-        // 更新
-        const updateNamespaceData = reactive({
-            url: common.k8sNamespaceUpdate,
+        //YAML更新
+        const updateConfigmapData = reactive({
+            url: common.k8sConfigmapUpdate,
             params: {
                 content: '',
                 namespace: '',
@@ -152,46 +158,16 @@ export default ({
             }
         })
         //删除
-        const delNamespaceData = reactive({
-            url: common.k8sNamespaceDel,
+        const delConfigmapData = reactive({
+            url: common.k8sConfigmapDel,
             params: {
-                ds_name: '',
+                cm_name: '',
                 namespace: '',
                 cluster: ''
             }
         })
 
-
         //【方法】
-        function getSearchValue(val) {
-            searchValue.value = val
-            pagination.current = 1
-        }
-        //处理翻页，pageSize变化
-        function handleTableChange(val) {
-            pagination.current = val.current
-            pagination.pageSize = val.pageSize
-            getNamespaceList()
-        }
-        //获取Namespace列表
-        function getNamespaceList() {
-            appLoading.value = true
-            namespaceListData.params.filter_name = searchValue.value
-            namespaceListData.params.cluster = localStorage.getItem('k8s_cluster')
-            namespaceListData.params.page = pagination.current
-            namespaceListData.params.limit = pagination.pageSize
-            httpClient.get(namespaceListData.url, {params: namespaceListData.params})
-            .then(res => {
-                namespaceList.value = res.data.items
-                pagination.total = res.data.total
-            })
-            .catch(res => {
-                message.error(res.msg)
-            })
-            .finally(() => {
-                appLoading.value = false
-            })
-        }
         // json 转 yaml
         function transYaml(content) {
             return json2yaml.stringify(content)
@@ -211,16 +187,53 @@ export default ({
         function ellipsis (val, len) {
             return val.length > len ? val.substring(0,len) + '...' : val
         }
-        //编辑器内容变化时触发的方法，用于将更新的内容复制到变量中
-        function onChange(val) {
+        //处理翻页，pageSize变化
+        function handleTableChange(val) {
+            pagination.current = val.current
+            pagination.pageSize = val.pageSize
+            getConfigmapList()
+        }
+        function getSearchValue(val) {
+            searchValue.value = val
+            pagination.current = 1
+        }
+
+        function getNamespaceValue(val) {
+            namespaceValue.value = val
+            pagination.current = 1
+        }
+
+       //编辑器内容变化时触发的方法，用于将更新的内容复制到变量中
+       function onChange(val) {
             contentYaml.value = val
         }
-        //获取pod列表详情
-        function getNamespaceDetail(e) {
+        //获取pod列表
+        function getConfigmapList() {
             appLoading.value = true
-            namespaceDetailData.params.namespace_name = e.metadata.name
-            namespaceDetailData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.get(namespaceDetailData.url, {params: namespaceDetailData.params})
+            configmapListData.params.filter_name = searchValue.value
+            configmapListData.params.namespace = namespaceValue.value
+            configmapListData.params.cluster = localStorage.getItem('k8s_cluster')
+            configmapListData.params.page = pagination.current
+            configmapListData.params.limit = pagination.pageSize
+            httpClient.get(configmapListData.url, {params: configmapListData.params})
+            .then(res => {
+                configmapList.value = res.data.items
+                pagination.total = res.data.total
+            })
+            .catch(res => {
+                message.error(res.msg)
+            })
+            .finally(() => {
+                appLoading.value = false
+            })
+        }
+        //获取Configmap列表详情
+        function getConfigmapDetail(e) {
+            appLoading.value = true
+            configmapData.params.cm_name = e.metadata.name
+            configmapData.params.namespace = namespaceValue.value
+            configmapData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.get(configmapData.url, {params: configmapData.params})
             .then(res => {
                 contentYaml.value = transYaml(res.data)
                 yamlModel.value = true
@@ -232,13 +245,14 @@ export default ({
                 appLoading.value = false
             })
         }
-        //更新pod
-        function updateNamespace() {
+        //更新Configmap
+        function updateConfigmap() {
             appLoading.value = true
             let content = JSON.stringify(transObj(contentYaml.value))
-            updateNamespaceData.params.content = content
-            updateNamespaceData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(updateNamespaceData.url, updateNamespaceData.params)
+            updateConfigmapData.params.content = content
+            updateConfigmapData.params.namespace = namespaceValue.value
+            updateConfigmapData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.put(updateConfigmapData.url, updateConfigmapData.params)
             .then(res => {
                 message.success(res.msg)
             })
@@ -248,17 +262,18 @@ export default ({
             .finally(() => {
                 setTimeout(() => {
                     yamlModel.value = false
-                    getNamespaceList()
+                    getConfigmapList()
                     appLoading.value = false
                 }, 1000)
             })
         }
-        //删除pod
-        function delNamespace(name) {
+        //删除Configmap
+        function delConfigmap(name) {
             appLoading.value = true
-            delNamespaceData.params.namespace_name = name
-            delNamespaceData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.delete(delNamespaceData.url, {data: delNamespaceData.params})
+            delConfigmapData.params.cm_name = name
+            delConfigmapData.params.namespace = namespaceValue.value
+            delConfigmapData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.delete(delConfigmapData.url, {data: delConfigmapData.params})
             .then(res => {
                 message.success(res.msg)
             })
@@ -267,10 +282,10 @@ export default ({
             })
             .finally(() => {
                 setTimeout(() => {
-                    getNamespaceList()
+                    getConfigmapList()
                     appLoading.value = false
                 }, 1000)
-                // getPodList()
+                // getConfigmapList()
             })
         }
         //确认框
@@ -287,47 +302,37 @@ export default ({
                 },
             })
         }
-
+        
         return {
-            getSearchValue,
-            getNamespaceList,
             appLoading,
-            columns,
-            namespaceList,
-            pagination,
+            namespaceValue,
+            getSearchValue,
+            getNamespaceValue,
+            configmapList,
             handleTableChange,
+            getConfigmapList,
+            columns,
+            pagination,
             ellipsis,
-            transObj,
-            transYaml,
             timeTrans,
-            getNamespaceDetail,
-            showConfirm,
-            delNamespace,
             yamlModel,
-            updateNamespace,
+            updateConfigmap,
             contentYaml,
             cmOptions,
             onChange,
+            getConfigmapDetail,
+            delConfigmap,
+            showConfirm,
         }
     }
 })
 </script>
 
-
 <style scoped>
-    .namespace-button {
+    .configmap-button {
         margin-right: 5px;
     }
     .ant-form-item {
         margin-bottom: 20px;
-    }
-    .success-status {
-        color: rgb(27, 202, 21);
-    }
-    .warning-status {
-        color: rgb(233, 200, 16);
-    }
-    .error-status {
-        color: rgb(226, 23, 23);
     }
 </style>

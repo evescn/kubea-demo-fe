@@ -7,7 +7,7 @@
             namespace
             @namespaceChange="getNamespaceValue"
             @namespaceList="getNamespaceList"
-            @dataList="getDeploymentList"
+            @dataList="getSvcList"
             @addFunc="handleAdd" />
         <MainHead
             v-if="role.id == '1'"
@@ -16,7 +16,7 @@
             namespace
             @namespaceChange="getNamespaceValue"
             @namespaceList="getNamespaceList"
-            @dataList="getDeploymentList"
+            @dataList="getSvcList"
             add
             @addFunc="handleAdd" />
         <!-- 表格数据 -->
@@ -25,7 +25,7 @@
                 style="font-size: 12px;"
                 :loading="appLoading"
                 :columns="columns"
-                :dataSource="deploymentList"
+                :dataSource="svcList"
                 :pagination="pagination"
                 @change="handleTableChange">
                 <template #bodyCell="{ column, record }">
@@ -42,30 +42,32 @@
                             </a-popover>
                         </div>
                     </template>
-                    <template v-if="column.dataIndex === 'containers'">
-                        <span style="font-weight:bold;">{{ record.status.availableReplicas > 0 ? record.status.availableReplicas: 0 }} / {{ record.spec.replicas > 0 ? record.spec.replicas: 0 }}</span>
+                    <template v-if="column.dataIndex === 'type'">
+                        <a-tag color="cyan">{{ record.spec.type }}</a-tag>
                     </template>
-                    <template v-if="column.dataIndex === 'image'">
-                        <div v-for="val, key in record.spec.template.spec.containers" :key="key">
-                            <a-popover>
-                                <template #content>
-                                    <span> {{ val.image }}</span>
-                                </template>
-                                <a-tag style="margin-bottom:3px; cursor:pointer;" color="geekblue">{{ ellipsis(val.image.split('/').pop() ? val.image.split('/').pop() : val.image, 100 ) }}</a-tag>
-                            </a-popover>
-                        </div>
+                    <template v-if="column.dataIndex === 'cluster-ip'">
+                        <!-- <span>{{ record.spec.clusterIPs }}</span> -->
+                        <div v-for="val, key in record.spec.clusterIPs" :key="key">
+                            <a-tag color="pink">{{ val }}</a-tag>
+                        </div>  
+                    </template>
+                    <template v-if="column.dataIndex === 'external-ip'">
+                        <span>{{ record.status.loadBalancer.svc ? record.status.loadBalancer.svc[0].ip : '-' }} </span>
+                    </template>
+                    <template v-if="column.dataIndex === 'port'">
+                        <div v-for="val, key in record.spec.ports" :key="key">
+                            <a-tag style="margin-bottom:5px; cursor:pointer;" color="orange" v-if="!val.nodePort">{{ val.name + ": " + val.port }}/{{ val.protocol }}</a-tag>
+                            <a-tag style="margin-bottom:5px; cursor:pointer;" color="orange" v-if="val.nodePort">{{ val.name + ": " + val.port }}:{{ val.nodePort }}/{{ val.protocol }}</a-tag>
+                        </div>  
                     </template>
                     <template v-if="column.dataIndex == 'creationTimestamp'">
                         <a-tag color="gray">{{ timeTrans(record.metadata.creationTimestamp) }}</a-tag>
-                        <!-- <a-tag color="gray">{{ record.metadata.creationTimestamp }}</a-tag> -->
                     </template>
                     <template v-if="column.key === 'action'">
-                        <c-button v-if="role.id !== '1'" :disabled="true" class="deployment-button" type="primary" icon="form-outlined" @click="getDeploymentDetail(record)">YML</c-button>
-                        <c-button v-else-if="role.id == '1'" class="deployment-button" type="primary" icon="form-outlined" @click="getDeploymentDetail(record)">YML</c-button>
-                        <c-button v-if="role.id !== '1'" :disabled="true" style="margin-bottom:5px;" class="deployment-button" type="error" icon="delete-outlined" >删除</c-button>
-                        <c-button v-else-if="role.id == '1'" style="margin-bottom:5px;" class="deployment-button" type="error" icon="delete-outlined" >删除</c-button>
-                        <c-button class="deployment-button" type="warning" icon="block-outlined" @click="handleScale(record)">扩容</c-button>
-                        <c-button class="deployment-button" type="warning" icon="retweet-outlined" @click="showConfirm('重启', record.metadata.name, restartDeployment)">重启</c-button>
+                        <c-button v-if="role.id !== '1'" :disabled="true" class="svc-button" type="primary" icon="form-outlined" @click="getSvcDetail(record)">YML</c-button>
+                        <c-button v-else-if="role.id == '1'" class="svc-button" type="primary" icon="form-outlined" @click="getSvcDetail(record)">YML</c-button>
+                        <c-button v-if="role.id !== '1'" :disabled="true"  style="margin-bottom:5px;" class="svc-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delSvc)">删除</c-button>
+                        <c-button v-else-if="role.id == '1'"  style="margin-bottom:5px;" class="svc-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delSvc)">删除</c-button>
                     </template>
                 </template>
             </a-table>
@@ -78,7 +80,7 @@
             width="945px"
             cancelText="取消"
             okText="更新"
-            @ok="updateDeployment">
+            @ok="updateSvc">
             <!-- codemirror 编辑器 -->
             <codemirror
                 :value="contentYaml"
@@ -90,37 +92,18 @@
                 @change="onChange">
             </codemirror>
         </a-modal>
-        <!-- 调整副本数的弹框 -->
-        <a-modal
-            v-model:visible="scaleModel"
-            title="副本数调整"
-            :confirm-loading="appLoading"
-            cancelText="取消"
-            okText="更新"
-            @ok="scaleDeployment">
-            <div style="text-align:center">
-                <span style="margin-right:30px;">实例数: </span>
-                <a-input-number v-model:value="scaleNum" :min="0" :max="30" label="描述文字"></a-input-number>
-                <a-popover>
-                    <template #content>
-                        <span>Deployment实例数最小0，最大30</span>
-                    </template>
-                    <info-circle-outlined style="margin-left:10px;color:rgb(84, 138, 238);" />
-                </a-popover>
-            </div>
-        </a-modal>
-        <!-- 创建deployment的抽屉弹框 -->
+        <!-- 创建svc的抽屉弹框 -->
         <a-drawer
             v-model:visible="createDrawer"
-            title="创建Deployment"
+            title="创建Svc"
             :footer-style="{ textAlign: 'right' }"
             @close="onClose">
             <br>
-            <a-form ref="formRef" :model="createDeployment" :labelCol="{style: {width: '30%'}}">
+            <a-form ref="formRef" :model="createSvc" :labelCol="{style: {width: '30%'}}">
                 <a-form-item
                     label="名称"
                     name="createName"
-                    :rules="[{ required: true, message: '请输入Deployment名称' }]">
+                    :rules="[{ required: true, message: '请输入Svc名称' }]">
                     <a-input v-model:value="createName" />
                 </a-form-item>
                 <a-form-item
@@ -142,7 +125,7 @@
                     <a-input-number v-model:value="createReplicas" :min="1" :max="30"></a-input-number>
                     <a-popover>
                         <template #content>
-                            <span>Deployment副本数最小1，最大30</span>
+                            <span>Svc副本数最小1，最大30</span>
                         </template>
                         <info-circle-outlined style="margin-left:10px;color:rgb(84, 138, 238);" />
                     </a-popover>
@@ -203,7 +186,6 @@ import { createVNode, reactive, ref, toRefs } from 'vue';
 import httpClient from '@/request';
 import common from '@/config';
 import { message, Modal } from 'ant-design-vue';
-
 import yaml2obj from 'js-yaml';
 import json2yaml from 'json2yaml';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
@@ -212,7 +194,7 @@ export default({
         //表结构
         const columns = ref([
             {
-                title: 'Deployment名',
+                title: 'Svc名',
                 dataIndex: 'name'
             },
             {
@@ -220,12 +202,20 @@ export default({
                 dataIndex: 'labels'
             },
             {
-                title: '容器组',
-                dataIndex: 'containers',
+                title: '类型',
+                dataIndex: 'type',
             },
             {
-                title: '镜像',
-                dataIndex: 'image'
+                title: 'CLUSTER-IP',
+                dataIndex: 'cluster-ip'
+            },
+            {
+                title: 'EXTERNAL-IP',
+                dataIndex: 'external-ip'
+            },
+            {
+                title: '端口',
+                dataIndex: 'port'
             },
             {
                 title: '创建时间',
@@ -259,9 +249,9 @@ export default({
             showTotal: total => `共 ${total} 条`
         })
         //列表
-        const deploymentList = ref([])
-        const deploymentListData = reactive({
-            url: common.k8sDeploymentList,
+        const svcList = ref([])
+        const svcListData = reactive({
+            url: common.k8sSvcList,
             params: {
                 filter_name: '',
                 namespace: '',
@@ -274,50 +264,28 @@ export default({
         const contentYaml = ref('')
         const yamlModel = ref(false)
         const cmOptions = common.cmOptions
-        const deploymentData = reactive({
-            url: common.k8sDeploymentDetail,
+        const svcData = reactive({
+            url: common.k8sSvcDetail,
             params: {
-                deployment_name: '',
+                svc_name: '',
                 namespace: '',
                 cluster: ''
             }
         })
         //YAML更新
-        const updateDeploymentData = reactive({
-            url: common.k8sDeploymentUpdate,
+        const updateSvcData = reactive({
+            url: common.k8sSvcUpdate,
             params: {
                 content: '',
                 namespace: '',
                 cluster: ''
             }
         })
-        //扩缩容
-
-        const scaleNum = ref(0)
-        const scaleModel = ref(false)
-        const scaleDeploymentData = reactive({
-            url: common.k8sDeploymentScale,
-            params: {
-                scale_num: '',
-                deployment_name: '',
-                namespace: '',
-                cluster: ''
-            }
-        })
-        //重启
-        const restartDeploymentData = reactive({
-            url: common.k8sDeploymentRestart,
-            params: {
-                deployment_name: '',
-                namespace: '',
-                cluster: ''
-            }
-        })
         //删除
-        const delDeploymentData = reactive({
-            url: common.k8sDeploymentDel,
+        const delSvcData = reactive({
+            url: common.k8sSvcDel,
             params: {
-                deployment_name: '',
+                svc_name: '',
                 namespace: '',
                 cluster: ''
             }
@@ -325,7 +293,7 @@ export default({
         //创建
         const formRef = ref()
         const createDrawer = ref(false)
-        const createDeployment = reactive({
+        const createSvc = reactive({
             createName: '',
             createNamespace: '',
             createReplicas: 1,
@@ -336,8 +304,8 @@ export default({
             createLabelStr: '',
             createContainerPort: ''
         })
-        const createDeploymentData = reactive({
-            url: common.k8sDeploymentCreate,
+        const createSvcData = reactive({
+            url: common.k8sSvcCreate,
             params: {
                 name: '',
                 namespace: '',
@@ -377,7 +345,7 @@ export default({
         function handleTableChange(val) {
             pagination.current = val.current
             pagination.pageSize = val.pageSize
-            getDeploymentList()
+            getSvcList()
         }
         function getSearchValue(val) {
             searchValue.value = val
@@ -397,16 +365,16 @@ export default({
             contentYaml.value = val
         }
         //获取pod列表
-        function getDeploymentList() {
+        function getSvcList() {
             appLoading.value = true
-            deploymentListData.params.filter_name = searchValue.value
-            deploymentListData.params.namespace = namespaceValue.value
-            deploymentListData.params.cluster = localStorage.getItem('k8s_cluster')
-            deploymentListData.params.page = pagination.current
-            deploymentListData.params.limit = pagination.pageSize
-            httpClient.get(deploymentListData.url, {params: deploymentListData.params})
+            svcListData.params.filter_name = searchValue.value
+            svcListData.params.namespace = namespaceValue.value
+            svcListData.params.cluster = localStorage.getItem('k8s_cluster')
+            svcListData.params.page = pagination.current
+            svcListData.params.limit = pagination.pageSize
+            httpClient.get(svcListData.url, {params: svcListData.params})
             .then(res => {
-                deploymentList.value = res.data.items
+                svcList.value = res.data.items
                 pagination.total = res.data.total
             })
             .catch(res => {
@@ -416,13 +384,13 @@ export default({
                 appLoading.value = false
             })
         }
-        //获取deployment列表详情
-        function getDeploymentDetail(e) {
+        //获取Svc列表详情
+        function getSvcDetail(e) {
             appLoading.value = true
-            deploymentData.params.deployment_name = e.metadata.name
-            deploymentData.params.namespace = namespaceValue.value
-            deploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.get(deploymentData.url, {params: deploymentData.params})
+            svcData.params.svc_name = e.metadata.name
+            svcData.params.namespace = namespaceValue.value
+            svcData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.get(svcData.url, {params: svcData.params})
             .then(res => {
                 contentYaml.value = transYaml(res.data)
                 yamlModel.value = true
@@ -434,14 +402,14 @@ export default({
                 appLoading.value = false
             })
         }
-        //更新Deployment
-        function updateDeployment() {
+        //更新Svc
+        function updateSvc() {
             appLoading.value = true
             let content = JSON.stringify(transObj(contentYaml.value))
-            updateDeploymentData.params.content = content
-            updateDeploymentData.params.namespace = namespaceValue.value
-            updateDeploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(updateDeploymentData.url, updateDeploymentData.params)
+            updateSvcData.params.content = content
+            updateSvcData.params.namespace = namespaceValue.value
+            updateSvcData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.put(updateSvcData.url, updateSvcData.params)
             .then(res => {
                 message.success(res.msg)
             })
@@ -451,24 +419,18 @@ export default({
             .finally(() => {
                 setTimeout(() => {
                     yamlModel.value = false
-                    getDeploymentList()
+                    getSvcList()
                     appLoading.value = false
                 }, 1000)
             })
         }
-        //handleScale
-        function handleScale(record) {
-            scaleModel.value = true
-            localStorage.setItem('deployment_name', record.metadata.name)
-            scaleNum.value = record.spec.replicas
-        }
-        function scaleDeployment(name) {
+        //删除Svc
+        function delSvc(name) {
             appLoading.value = true
-            scaleDeploymentData.params.scale_num = scaleNum
-            scaleDeploymentData.params.deployment_name = localStorage.getItem('deployment_name')
-            scaleDeploymentData.params.namespace = namespaceValue.value
-            scaleDeploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(scaleDeploymentData.url, scaleDeploymentData.params)
+            delSvcData.params.Svc_name = name
+            delSvcData.params.namespace = namespaceValue.value
+            delSvcData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.delete(delSvcData.url, {data: delSvcData.params})
             .then(res => {
                 message.success(res.msg)
             })
@@ -477,54 +439,10 @@ export default({
             })
             .finally(() => {
                 setTimeout(() => {
-                    localStorage.removeItem('deployment_name')
-                    scaleModel.value = false
-                    getDeploymentList()
+                    getSvcList()
                     appLoading.value = false
                 }, 1000)
-                // getDeploymentList()
-            })
-        }
-        //重启Deployment
-        function restartDeployment(name) {
-            appLoading.value = true
-            restartDeploymentData.params.deployment_name = name
-            restartDeploymentData.params.namespace = namespaceValue.value
-            restartDeploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(restartDeploymentData.url, restartDeploymentData.params)
-            .then(res => {
-                message.success(res.msg)
-            })
-            .catch(res => {
-                message.error(res.msg)
-            })
-            .finally(() => {
-                setTimeout(() => {
-                    getDeploymentList()
-                    appLoading.value = false
-                }, 1000)
-                // getDeploymentList()
-            })
-        }
-        //删除Deployment
-        function delDeployment(name) {
-            appLoading.value = true
-            delDeploymentData.params.deployment_name = name
-            delDeploymentData.params.namespace = namespaceValue.value
-            delDeploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.delete(delDeploymentData.url, {data: delDeploymentData.params})
-            .then(res => {
-                message.success(res.msg)
-            })
-            .catch(res => {
-                message.error(res.msg)
-            })
-            .finally(() => {
-                setTimeout(() => {
-                    getDeploymentList()
-                    appLoading.value = false
-                }, 1000)
-                // getDeploymentList()
+                // getSvcList()
             })
         }
         //确认框
@@ -548,11 +466,9 @@ export default({
         //验证表单
         async function formSubmit() {
             try {
-                // console.log(formRef.value)
-                // console.log(createDeployment)
                 await formRef.value.validateFields();
-                // console.log('Success:', createDeployment);
-                createDeploymentFunc()
+                console.log('Success:', createSvc);
+                createSvcFunc()
             } catch (errorInfo) {
                 console.log('Failed:', errorInfo);
             }
@@ -560,11 +476,11 @@ export default({
         function resetForm() {
             formRef.value.resetFields();
         }
-        //创建deployment
-        function createDeploymentFunc() {
+        //创建Svc
+        function createSvcFunc() {
             //正则匹配，验证label的合法性
             let reg = new RegExp("(^[A-Za-z]+=[A-Za-z0-9]+).*")
-            if (!reg.test(createDeployment.createLabelStr)) {
+            if (!reg.test(createSvc.createLabelStr)) {
                 message.warning("标签填写异常，请确认后重新填写")
                 return
             }
@@ -574,29 +490,29 @@ export default({
             let label = new Map()
             let cpu, memory
             //将label字符串转成数组
-            let a = (createDeployment.createLabelStr).split(",")
+            let a = (createSvc.createLabelStr).split(",")
             //将数组转成map
             a.forEach(item => {
                 let b = item.split("=")
                 label[b[0]] = b[1]
             })
-            //将deployment的规格转成cpu和memory
-            let resourceList = createDeployment.createResource.split("/")
+            //将Svc的规格转成cpu和memory
+            let resourceList = createSvc.createResource.split("/")
             cpu = resourceList[0]
             memory = resourceList[1] + "Gi"
             //赋值
-            createDeploymentData.params.label = label
-            createDeploymentData.params.cpu = cpu
-            createDeploymentData.params.memory = memory
-            createDeploymentData.params.name = createDeployment.createName
-            createDeploymentData.params.namespace = createDeployment.createNamespace
-            createDeploymentData.params.replicas = createDeployment.createReplicas
-            createDeploymentData.params.image = createDeployment.createImage
-            createDeploymentData.params.health_check = createDeployment.createHealthCheck
-            createDeploymentData.params.health_path = createDeployment.createHealthPath
-            createDeploymentData.params.container_port = parseInt(createDeployment.createContainerPort)
-            createDeploymentData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.post(createDeploymentData.url, createDeploymentData.params)
+            createSvcData.params.label = label
+            createSvcData.params.cpu = cpu
+            createSvcData.params.memory = memory
+            createSvcData.params.name = createSvc.createName
+            createSvcData.params.namespace = createSvc.createNamespace
+            createSvcData.params.replicas = createSvc.createReplicas
+            createSvcData.params.image = createSvc.createImage
+            createSvcData.params.health_check = createSvc.createHealthCheck
+            createSvcData.params.health_path = createSvc.createHealthPath
+            createSvcData.params.container_port = parseInt(createSvc.createContainerPort)
+            createSvcData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.post(createSvcData.url, createSvcData.params)
             .then(res => {
                 message.success(res.msg)
             })
@@ -606,7 +522,7 @@ export default({
             .finally(() => {
                 //重置表单
                 resetForm()
-                getDeploymentList()
+                getSvcList()
                 //关闭抽屉
                 createDrawer.value = false
             })
@@ -636,43 +552,38 @@ export default({
             namespaceValue,
             getSearchValue,
             getNamespaceValue,
-            deploymentList,
+            svcList,
             handleTableChange,
-            getDeploymentList,
+            getSvcList,
             columns,
             pagination,
             ellipsis,
             timeTrans,
             yamlModel,
-            updateDeployment,
+            updateSvc,
             contentYaml,
             cmOptions,
             onChange,
-            getDeploymentDetail,
-            delDeployment,
+            getSvcDetail,
+            delSvc,
             showConfirm,
-            restartDeployment,
-            handleScale,
-            scaleModel,
-            scaleDeployment,
-            scaleNum,
-            handleAdd,
             createDrawer,
             onClose,
-            createDeployment,
+            createSvc,
             formSubmit,
             namespaceList,
             getNamespaceList,
             formRef,
-            ...toRefs(createDeployment),
-            role
+            handleAdd,
+            ...toRefs(createSvc),
+            role,
         }
     }
 })
 </script>
 
 <style scoped>
-    .deployment-button {
+    .svc-button {
         margin-right: 5px;
     }
     .ant-form-item {

@@ -5,50 +5,40 @@
             @searchChange="getSearchValue"
             namespace
             @namespaceChange="getNamespaceValue"
-            @dataList="getPodList">
-        </MainHead>
+            @dataList="getStatefulSetList"/>
         <!-- 表格数据 -->
         <a-card :bodyStyle="{padding: '10px'}">
             <a-table
                 style="font-size: 12px;"
                 :loading="appLoading"
                 :columns="columns"
-                :dataSource="podList"
+                :dataSource="statefulSetList"
                 :pagination="pagination"
                 @change="handleTableChange">
                 <template #bodyCell="{ column, record }">
                     <template v-if="column.dataIndex == 'name'">
                         <span style="font-weight: bold">{{ record.metadata.name }}</span>
                     </template>
-                    <template v-if="column.dataIndex == 'node'">
-                        <span style="color:rgb(84, 138, 238)">{{ record.spec.nodeName }}</span>
-                    </template>
-                    <template v-if="column.dataIndex == 'state'">
-                        <div
-                            :class="{'succ-dot':record.status.phase == 'Running',
-                            'warn-dot':record.status.phase == 'Pending',
-                            'err-dot':record.status.phase != 'Running' && record.status.phase != 'Pending'}"
-                            >
+                    <template v-if="column.dataIndex === 'labels'">
+                        <div v-for="val, key in record.metadata.labels" :key="key">
+                            <a-popover title="Title">
+                                <template #content>
+                                    <span> {{ key + ": " + val }}</span>
+                                </template>
+                                <a-tag style="margin-bottom:3px; cursor:pointer;" color="blue">{{ ellipsis(key + ": " + val, 15) }}</a-tag>
+                            </a-popover>
                         </div>
-                        <span
-                            :class="{'succ-state':record.status.phase == 'Running',
-                            'warn-state':record.status.phase == 'Pending',
-                            'err-status':record.status.phase != 'Running' && record.status.phase != 'Pending'}">
-                            {{ record.status.phase }}
-                        </span>
                     </template>
-                    <template v-if="column.dataIndex == 'restarts'">
-                        <span>{{ restartTotal(record) }}</span>
+                    <template v-if="column.dataIndex === 'containers'">
+                        <span style="font-weight:bold;">{{ record.status.availableReplicas > 0 ? record.status.availableReplicas: 0 }} / {{ record.spec.replicas > 0 ? record.spec.replicas: 0 }}</span>
                     </template>
-                    <template v-if="column.dataIndex == 'image'">
-                        <div v-for="(val, key) in record.spec.containers" :key="key">
+                    <template v-if="column.dataIndex === 'image'">
+                        <div v-for="val, key in record.spec.template.spec.containers" :key="key">
                             <a-popover>
                                 <template #content>
-                                    <span>{{ val.image }}</span>
+                                    <span> {{ val.image }}</span>
                                 </template>
-                                <a-tag style="margin-bottom:5px;cursor:pointer;" color="geekblue">
-                                    {{ ellipsis(val.image.split('/').pop() ? val.image.split('/').pop() : val.image, 100 ) }}
-                                </a-tag>
+                                <a-tag style="margin-bottom:3px; cursor:pointer;" color="geekblue">{{ ellipsis(val.image.split('/').pop() ? val.image.split('/').pop() : val.image, 100 ) }}</a-tag>
                             </a-popover>
                         </div>
                     </template>
@@ -57,10 +47,8 @@
                         <!-- <a-tag color="gray">{{ record.metadata.creationTimestamp }}</a-tag> -->
                     </template>
                     <template v-if="column.key === 'action'">
-                        <c-button class="pod-button" type="primary" icon="form-outlined" @click="getPodDetail(record)">YML</c-button>
-                        <c-button style="margin-bottom:5px;" class="pod-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delPod)">删除</c-button>
-                        <c-button class="pod-button" type="warning" icon="file-search-outlined" @click="gotoLog(record)">日志</c-button>
-                        <c-button class="pod-button" type="warning" icon="code-outlined" @click="gotoTerminal(record)">终端</c-button>
+                        <c-button class="daemenset-button" type="primary" icon="form-outlined" @click="getStatefulSetDetail(record)">YML</c-button>
+                        <c-button style="margin-bottom:5px;" class="daemenset-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delStatefulSet)">删除</c-button>
                     </template>
                 </template>
             </a-table>
@@ -73,7 +61,7 @@
             width="945px"
             cancelText="取消"
             okText="更新"
-            @ok="updatePod">
+            @ok="updateStatefulSet">
             <!-- codemirror 编辑器 -->
             <codemirror
                 :value="contentYaml"
@@ -96,7 +84,6 @@ import { message, Modal } from 'ant-design-vue'
 import json2yaml from 'json2yaml'
 import yaml2obj from 'js-yaml'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
-import { useRouter } from 'vue-router'
 
 export default ({
     setup() {
@@ -107,29 +94,24 @@ export default ({
         const appLoading = ref(false)
         const columns = ref([
             {
-                title: 'POD名',
-                dataIndex: 'name',
+                title: 'StatefulSet名',
+                dataIndex: 'name'
             },
             {
-                title: '节点',
-                dataIndex: 'node',
+                title: '标签',
+                dataIndex: 'labels'
             },
             {
-                title: '状态',
-                dataIndex: 'state',
-                width: 120,
-            },
-            {
-                title: '重启数',
-                dataIndex: 'restarts',
+                title: '容器组',
+                dataIndex: 'containers',
             },
             {
                 title: '镜像',
-                dataIndex: 'image',
+                dataIndex: 'image'
             },
             {
                 title: '创建时间',
-                dataIndex: 'creationTimestamp',
+                dataIndex: 'creationTimestamp'
             },
             {
                 title: '操作',
@@ -151,9 +133,9 @@ export default ({
         })
 
         //列表属性
-        const podList = ref()
-        const podListData = reactive({
-            url: common.k8sPodList,
+        const statefulSetList = ref()
+        const statefulSetListData = reactive({
+            url: common.k8sStatefulSetList,
             params: {
                 filter_name: '',
                 namespace: '',
@@ -167,18 +149,18 @@ export default ({
         const contentYaml = ref('')
         const yamlModel = ref(false)
         const cmOptions = common.cmOptions
-        const podDetailData = reactive({
-            url: common.k8sPodDetail,
+        const statefulSetDetailData = reactive({
+            url: common.k8sStatefulSetDetail,
             params: {
-                pod_name: '',
+                sts_name: '',
                 namespace: '',
                 cluster: ''
             }
         })
 
         // 更新
-        const updatePodData = reactive({
-            url: common.k8sPodUpdate,
+        const updateStatefulSetData = reactive({
+            url: common.k8sStatefulSetUpdate,
             params: {
                 content: '',
                 namespace: '',
@@ -186,23 +168,21 @@ export default ({
             }
         })
         //删除
-        const delPodData = reactive({
-            url: common.k8sPodDel,
+        const delStatefulSetData = reactive({
+            url: common.k8sStatefulSetDel,
             params: {
-                pod_name: '',
+                sts_name: '',
                 namespace: '',
                 cluster: ''
             }
         })
-        //router实例
-        const router = useRouter()
+
 
         //【方法】
         function getSearchValue(val) {
             searchValue.value = val
             pagination.current = 1
         }
-
         function getNamespaceValue(val) {
             namespaceValue.value = val
             pagination.current = 1
@@ -211,19 +191,19 @@ export default ({
         function handleTableChange(val) {
             pagination.current = val.current
             pagination.pageSize = val.pageSize
-            getPodList()
+            getStatefulSetList()
         }
-        //获取pod列表
-        function getPodList() {
+        //获取DaemonSet列表
+        function getStatefulSetList() {
             appLoading.value = true
-            podListData.params.filter_name = searchValue.value
-            podListData.params.namespace = namespaceValue.value
-            podListData.params.cluster = localStorage.getItem('k8s_cluster')
-            podListData.params.page = pagination.current
-            podListData.params.limit = pagination.pageSize
-            httpClient.get(podListData.url, {params: podListData.params})
+            statefulSetListData.params.filter_name = searchValue.value
+            statefulSetListData.params.namespace = namespaceValue.value
+            statefulSetListData.params.cluster = localStorage.getItem('k8s_cluster')
+            statefulSetListData.params.page = pagination.current
+            statefulSetListData.params.limit = pagination.pageSize
+            httpClient.get(statefulSetListData.url, {params: statefulSetListData.params})
             .then(res => {
-                podList.value = res.data.items
+                statefulSetList.value = res.data.items
                 pagination.total = res.data.total
             })
             .catch(res => {
@@ -233,18 +213,13 @@ export default ({
                 appLoading.value = false
             })
         }
-        //获取容器重启次数
-        function restartTotal(e) {
-            let index, sum = 0
-            let containerStatuses = e.status.containerStatuses
-            for ( index in containerStatuses) {
-                sum = sum + containerStatuses[index].restartCount 
-            }
-            return sum
+        // json 转 yaml
+        function transYaml(content) {
+            return json2yaml.stringify(content)
         }
-        //截取容器名称中前面的镜像仓库地址
-        function ellipsis(val, len) {
-            return val.length > len ? val.substring(0,len) + '...' : val
+        //yaml 转对象
+        function transObj(content) {
+            return yaml2obj.load(content)
         }
         //容器时间调整
         function timeTrans(timestamp) {
@@ -253,25 +228,21 @@ export default ({
             date = date.substring(0, 19).replace('T', ' ')
             return date 
         }
-        //yaml 转对象
-        function transObj(content) {
-            return yaml2obj.load(content)
-        }
-        // json 转 yaml
-        function transYaml(content) {
-            return json2yaml.stringify(content)
+        //截取标签名称
+        function ellipsis (val, len) {
+            return val.length > len ? val.substring(0,len) + '...' : val
         }
         //编辑器内容变化时触发的方法，用于将更新的内容复制到变量中
         function onChange(val) {
             contentYaml.value = val
         }
         //获取pod列表详情
-        function getPodDetail(e) {
+        function getStatefulSetDetail(e) {
             appLoading.value = true
-            podDetailData.params.pod_name = e.metadata.name
-            podDetailData.params.namespace = namespaceValue.value
-            podDetailData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.get(podDetailData.url, {params: podDetailData.params})
+            statefulSetDetailData.params.sts_name = e.metadata.name
+            statefulSetDetailData.params.namespace = namespaceValue.value
+            statefulSetDetailData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.get(statefulSetDetailData.url, {params: statefulSetDetailData.params})
             .then(res => {
                 contentYaml.value = transYaml(res.data)
                 yamlModel.value = true
@@ -284,13 +255,13 @@ export default ({
             })
         }
         //更新pod
-        function updatePod() {
+        function updateStatefulSet() {
             appLoading.value = true
             let content = JSON.stringify(transObj(contentYaml.value))
-            updatePodData.params.content = content
-            updatePodData.params.namespace = namespaceValue.value
-            updatePodData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(updatePodData.url, updatePodData.params)
+            updateStatefulSetData.params.content = content
+            updateStatefulSetData.params.namespace = namespaceValue.value
+            updateStatefulSetData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.put(updateStatefulSetData.url, updateStatefulSetData.params)
             .then(res => {
                 message.success(res.msg)
             })
@@ -300,18 +271,18 @@ export default ({
             .finally(() => {
                 setTimeout(() => {
                     yamlModel.value = false
-                    getPodList()
+                    getStatefulSetList()
                     appLoading.value = false
                 }, 1000)
             })
         }
         //删除pod
-        function delPod(name) {
+        function delStatefulSet(name) {
             appLoading.value = true
-            delPodData.params.pod_name = name
-            delPodData.params.namespace = namespaceValue.value
-            delPodData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.delete(delPodData.url, {data: delPodData.params})
+            delStatefulSetData.params.sts_name = name
+            delStatefulSetData.params.namespace = namespaceValue.value
+            delStatefulSetData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.delete(delStatefulSetData.url, {data: delStatefulSetData.params})
             .then(res => {
                 message.success(res.msg)
             })
@@ -320,7 +291,7 @@ export default ({
             })
             .finally(() => {
                 setTimeout(() => {
-                    getPodList()
+                    getStatefulSetList()
                     appLoading.value = false
                 }, 1000)
                 // getPodList()
@@ -340,100 +311,39 @@ export default ({
                 },
             })
         }
-        //跳转日志页
-        function gotoLog(e) {
-            let routeUrl = router.resolve({
-                path: "/workload/pod/log",
-                query: {
-                    pod_name: e.metadata.name,
-                    namespace: e.metadata.namespace,
-                    cluster: localStorage.getItem('k8s_cluster')
-                }
-            })
-            window.open(routeUrl.href, '_blank')
-        }
-        //跳转终端页
-        function gotoTerminal(record) {
-            let routeUrl = router.resolve({
-                path: "/workload/pod/terminal",
-                query: {
-                    pod_name: record.metadata.name,
-                    namespace: record.metadata.namespace,
-                    cluster: localStorage.getItem('k8s_cluster')
-                }
-            })
-            window.open(routeUrl.href, '_blank')
-        }
-        
+
         return {
             getSearchValue,
             getNamespaceValue,
-            getPodList,
+            getStatefulSetList,
             appLoading,
             columns,
+            statefulSetList,
             pagination,
-            podList,
             handleTableChange,
-            restartTotal,
             ellipsis,
+            transObj,
+            transYaml,
             timeTrans,
-            getPodDetail,
+            getStatefulSetDetail,
+            showConfirm,
+            delStatefulSet,
             yamlModel,
-            updatePod,
+            updateStatefulSet,
             contentYaml,
             cmOptions,
             onChange,
-            delPod,
-            showConfirm,
-            gotoLog,
-            gotoTerminal,
         }
     }
 })
 </script>
 
+
 <style scoped>
-    .pod-button {
+    .daemenset-button {
         margin-right: 5px;
     }
-    .ant-btn {
-        border-radius: 1px;
-    }
-    .succ-dot{
-        display:inline-block;
-        width: 7px;
-        height:7px;
-        background:#86c169;
-        border-radius:50%;
-        border:1px solid #88c06c;
-        margin-right: 10px;
-    }
-    .warn-dot{
-        display:inline-block;
-        width: 7px;
-        height:7px;
-        background: rgb(233, 200, 16);
-        border-radius:50%;
-        border:1px solid rgb(233, 200, 16);
-        margin-right: 10px;
-    }
-    .err-dot{
-        display:inline-block;
-        width: 7px;
-        height:7px;
-        background:rgb(199, 85, 85);
-        border-radius:50%;
-        border:1px solid rgb(207, 94, 94);
-        margin-right: 10px;
-    }
-    .succ-state {
-        color: rgb(27, 202, 21);
-    }
-    .warn-state {
-        color: rgb(233, 200, 16);
-    }
-    .err-state {
-        color: rgb(226, 23, 23);
+    .ant-form-item {
+        margin-bottom: 20px;
     }
 </style>
-

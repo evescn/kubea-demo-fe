@@ -3,15 +3,14 @@
         <MainHead
             searchDescribe="请输入"
             @searchChange="getSearchValue"
-            @dataList="getNamespaceList">
-        </MainHead>
+            @dataList="getPvList"/>
         <!-- 表格数据 -->
         <a-card :bodyStyle="{padding: '10px'}">
             <a-table
                 style="font-size: 12px;"
                 :loading="appLoading"
                 :columns="columns"
-                :dataSource="namespaceList"
+                :dataSource="pvList"
                 :pagination="pagination"
                 @change="handleTableChange">
                 <template #bodyCell="{ column, record }">
@@ -20,7 +19,7 @@
                     </template>
                     <template v-if="column.dataIndex === 'labels'">
                         <div v-for="val, key in record.metadata.labels" :key="key">
-                            <a-popover>
+                            <a-popover title="Title">
                                 <template #content>
                                     <span> {{ key + ": " + val }}</span>
                                 </template>
@@ -29,15 +28,26 @@
                         </div>
                     </template>
                     <template v-if="column.dataIndex === 'status'">
-                        <span :class="[record.status.phase === 'Active' ? 'success-status' : 'error-status']">{{ record.status.phase }}</span>
+                        <span :class="[record.status.phase === 'Bound' ? 'success-status' : 'error-status']">{{ record.status.phase }}</span>
+                    </template>
+                    <template v-if="column.dataIndex === 'storage'">
+                        <a-tag color="orange">{{ record.spec.capacity.storage }}</a-tag>
+                    </template>
+                    <template v-if="column.dataIndex === 'accessMode'">
+                        <div v-for="val, key in record.spec.accessModes" :key="key">
+                            <a-tag style="margin-bottom:5px; cursor:pointer;" color="cyan">{{ val }}</a-tag>
+                        </div>                        
+                        <!-- <span style="color: rgb(84, 138, 238);font-weight:bold;">{{ record.spec.accessModes[0] }}</span> -->
+                    </template>
+                    <template v-if="column.dataIndex === 'pvc'">
+                        <span>{{ record.spec.claimRef.name }}</span>
                     </template>
                     <template v-if="column.dataIndex == 'creationTimestamp'">
                         <a-tag color="gray">{{ timeTrans(record.metadata.creationTimestamp) }}</a-tag>
-                        <!-- <a-tag color="gray">{{ record.metadata.creationTimestamp }}</a-tag> -->
                     </template>
                     <template v-if="column.key === 'action'">
-                        <c-button class="namespace-button" type="primary" icon="form-outlined" @click="getNamespaceDetail(record)">YML</c-button>
-                        <c-button style="margin-bottom:5px;" class="namespace-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delNamespace)">删除</c-button>
+                        <c-button class="pv-button" type="primary" icon="form-outlined" @click="getPvDetail(record)">YML</c-button>
+                        <c-button style="margin-bottom:5px;" class="pv-button" type="error" icon="delete-outlined" @click="showConfirm('删除', record.metadata.name, delPv)">删除</c-button>
                     </template>
                 </template>
             </a-table>
@@ -50,7 +60,7 @@
             width="945px"
             cancelText="取消"
             okText="更新"
-            @ok="updateNamespace">
+            @ok="updatePv">
             <!-- codemirror 编辑器 -->
             <codemirror
                 :value="contentYaml"
@@ -82,7 +92,7 @@ export default ({
         const appLoading = ref(false)
         const columns = ref([
             {
-                title: 'Namespace名',
+                title: 'Pv名',
                 dataIndex: 'name'
             },
             {
@@ -91,7 +101,19 @@ export default ({
             },
             {
                 title: '状态',
-                dataIndex: 'status',
+                dataIndex: 'status'
+            },
+            {
+                title: '容量',
+                dataIndex: 'storage',
+            },
+            {
+                title: '访问模式',
+                dataIndex: 'accessMode',
+            },
+            {
+                title: 'PVC',
+                dataIndex: 'pvc',
             },
             {
                 title: '创建时间',
@@ -117,9 +139,9 @@ export default ({
         })
 
         //列表属性
-        const namespaceList = ref()
-        const namespaceListData = reactive({
-            url: common.k8sNamespaceList,
+        const pvList = ref()
+        const pvListData = reactive({
+            url: common.k8sPvList,
             params: {
                 filter_name: '',
                 namespace: '',
@@ -133,8 +155,8 @@ export default ({
         const contentYaml = ref('')
         const yamlModel = ref(false)
         const cmOptions = common.cmOptions
-        const namespaceDetailData = reactive({
-            url: common.k8sNamespaceDetail,
+        const pvDetailData = reactive({
+            url: common.k8sPvDetail,
             params: {
                 ds_name: '',
                 namespace: '',
@@ -143,8 +165,8 @@ export default ({
         })
 
         // 更新
-        const updateNamespaceData = reactive({
-            url: common.k8sNamespaceUpdate,
+        const updatePvData = reactive({
+            url: common.k8sPvUpdate,
             params: {
                 content: '',
                 namespace: '',
@@ -152,8 +174,8 @@ export default ({
             }
         })
         //删除
-        const delNamespaceData = reactive({
-            url: common.k8sNamespaceDel,
+        const delPvData = reactive({
+            url: common.k8sPvDel,
             params: {
                 ds_name: '',
                 namespace: '',
@@ -171,18 +193,18 @@ export default ({
         function handleTableChange(val) {
             pagination.current = val.current
             pagination.pageSize = val.pageSize
-            getNamespaceList()
+            getPvList()
         }
-        //获取Namespace列表
-        function getNamespaceList() {
+        //获取Pv列表
+        function getPvList() {
             appLoading.value = true
-            namespaceListData.params.filter_name = searchValue.value
-            namespaceListData.params.cluster = localStorage.getItem('k8s_cluster')
-            namespaceListData.params.page = pagination.current
-            namespaceListData.params.limit = pagination.pageSize
-            httpClient.get(namespaceListData.url, {params: namespaceListData.params})
+            pvListData.params.filter_name = searchValue.value
+            pvListData.params.cluster = localStorage.getItem('k8s_cluster')
+            pvListData.params.page = pagination.current
+            pvListData.params.limit = pagination.pageSize
+            httpClient.get(pvListData.url, {params: pvListData.params})
             .then(res => {
-                namespaceList.value = res.data.items
+                pvList.value = res.data.items
                 pagination.total = res.data.total
             })
             .catch(res => {
@@ -216,11 +238,11 @@ export default ({
             contentYaml.value = val
         }
         //获取pod列表详情
-        function getNamespaceDetail(e) {
+        function getPvDetail(e) {
             appLoading.value = true
-            namespaceDetailData.params.namespace_name = e.metadata.name
-            namespaceDetailData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.get(namespaceDetailData.url, {params: namespaceDetailData.params})
+            pvDetailData.params.pv_name = e.metadata.name
+            pvDetailData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.get(pvDetailData.url, {params: pvDetailData.params})
             .then(res => {
                 contentYaml.value = transYaml(res.data)
                 yamlModel.value = true
@@ -233,12 +255,12 @@ export default ({
             })
         }
         //更新pod
-        function updateNamespace() {
+        function updatePv() {
             appLoading.value = true
             let content = JSON.stringify(transObj(contentYaml.value))
-            updateNamespaceData.params.content = content
-            updateNamespaceData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.put(updateNamespaceData.url, updateNamespaceData.params)
+            updatePvData.params.content = content
+            updatePvData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.put(updatePvData.url, updatePvData.params)
             .then(res => {
                 message.success(res.msg)
             })
@@ -248,17 +270,17 @@ export default ({
             .finally(() => {
                 setTimeout(() => {
                     yamlModel.value = false
-                    getNamespaceList()
+                    getPvList()
                     appLoading.value = false
                 }, 1000)
             })
         }
         //删除pod
-        function delNamespace(name) {
+        function delPv(name) {
             appLoading.value = true
-            delNamespaceData.params.namespace_name = name
-            delNamespaceData.params.cluster = localStorage.getItem('k8s_cluster')
-            httpClient.delete(delNamespaceData.url, {data: delNamespaceData.params})
+            delPvData.params.pv_name = name
+            delPvData.params.cluster = localStorage.getItem('k8s_cluster')
+            httpClient.delete(delPvData.url, {data: delPvData.params})
             .then(res => {
                 message.success(res.msg)
             })
@@ -267,7 +289,7 @@ export default ({
             })
             .finally(() => {
                 setTimeout(() => {
-                    getNamespaceList()
+                    getPvList()
                     appLoading.value = false
                 }, 1000)
                 // getPodList()
@@ -290,21 +312,21 @@ export default ({
 
         return {
             getSearchValue,
-            getNamespaceList,
+            getPvList,
             appLoading,
             columns,
-            namespaceList,
+            pvList,
             pagination,
             handleTableChange,
             ellipsis,
             transObj,
             transYaml,
             timeTrans,
-            getNamespaceDetail,
+            getPvDetail,
             showConfirm,
-            delNamespace,
+            delPv,
             yamlModel,
-            updateNamespace,
+            updatePv,
             contentYaml,
             cmOptions,
             onChange,
@@ -315,7 +337,7 @@ export default ({
 
 
 <style scoped>
-    .namespace-button {
+    .pv-button {
         margin-right: 5px;
     }
     .ant-form-item {
