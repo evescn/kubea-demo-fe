@@ -117,4 +117,4 @@ $ kubectl apply -f k8s.yaml
 ## 3. 服务访问
 
 > 项目前后端分离，需要部署后端后才能访问
-> [后端地址](https://github.com/evescn/kubea-demo)
+> [后端地址](https://github.com/evescn/kubea)
