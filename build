@@ -1,4 +1,4 @@
--#!/bin/bash
+#!/bin/bash
 
 ## 打包服务
 rm -rf ./dist

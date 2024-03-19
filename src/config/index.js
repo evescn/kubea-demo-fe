@@ -176,6 +176,6 @@ export default {
     //开发语言
     appLangList: ['Java', 'Web'],
     appTypeList: ['Admin', 'Job', 'Api'],
-    enList: ['t1', 't3', 'd1'],
+    enList: ['prod', 't1', 't3', 'd1'],
     repoList: ['bhbl', 'fe', 'inf']
 }
