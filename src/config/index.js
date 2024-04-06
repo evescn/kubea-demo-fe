@@ -1,14 +1,5 @@
-// const baseHost = 'http://10.0.0.101:29000'
-// const wsHost = 'ws://10.0.0.101:28082'
-
-// const baseHost = 'http://localhost:9000'
-// const wsHost = 'ws://localhost:8082'
-
-// const baseHost = 'http://t1-kubea-demo.dayuan1997.com'
-// const wsHost = 'ws://10.0.0.101:28082'
-
-const baseHost = 'http://kubea.dayuan1997.com'
-const wsHost = 'ws://kubea.dayuan1997.com'
+const baseHost = process.env.VUE_APP_BaseHost
+const wsHost = process.env.VUE_APP_WsHost
 
 export default {
     //登录
@@ -177,5 +168,6 @@ export default {
     appLangList: ['Java', 'Web'],
     appTypeList: ['Admin', 'Job', 'Api'],
     enList: ['prod', 't1', 't3', 'd1'],
-    repoList: ['bhbl', 'fe', 'inf']
+    repoList: ['bhbl', 'fe', 'inf', 'ops'],
+    visibility: ['internal', 'private', 'public']
 }

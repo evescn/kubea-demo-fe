@@ -66,15 +66,15 @@
         <a-form ref="updateRef" :model="updateApp" :labelCol="{style: {width: '30%'}}">
             <a-form-item
                 label="应用名"
-                name="app_name"
+                name="app_name"                
                 :rules="[{ required: true, message: '请输入应用名'}]">
-                <a-input v-model:value="updateApp.app_name"></a-input>
+                <a-input disabled v-model:value="updateApp.app_name"></a-input>
             </a-form-item>
             <a-form-item
                 label="仓库"
                 name="repo_name"
                 :rules="[{ required: true, message: '请输入仓库名'}]">
-                <a-select show-search style="width:140px;margin-right:20px;" size="small" v-model:value="updateApp.repo_name"
+                <a-select show-search style="width:165px;margin-right:20px;" v-model:value="updateApp.repo_name"
                           placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in repoList"
@@ -88,7 +88,7 @@
                 label="开发语言"
                 name="lang"
                 :rules="[{ required: true, message: '请选择开发语言'}]">
-                <a-select show-search style="width: 140px" v-model:value="updateApp.lang" placeholder="请选择">
+                <a-select show-search style="width: 165px" v-model:value="updateApp.lang" placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in appLangList"
                         :key="index"
@@ -101,7 +101,7 @@
                 label="类型"
                 name="type"
                 :rules="[{ required: true, message: '请选择应用类型'}]">
-                <a-select show-search style="width: 140px" v-model:value="updateApp.type" placeholder="请选择">
+                <a-select show-search style="width: 165px" v-model:value="updateApp.type" placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in appTypeList"
                         :key="index"
@@ -135,7 +135,7 @@
         :footer-style="{textAlign: 'right'}"
         @close="onClose('create')">
         <br>
-        <a-form ref="createRef" :model="createApp" :labelCol="{style: {width: '30%'}}">
+        <a-form ref="createRef" :model="createApp" :labelCol="{style: {width: '50%'}}">
             <a-form-item
                 label="应用名"
                 name="app_name"
@@ -146,7 +146,7 @@
                 label="仓库"
                 name="repo_name"
                 :rules="[{ required: true, message: '请输入仓库名'}]">
-                <a-select show-search style="width:140px;margin-right:20px;" size="small" v-model:value="createApp.repo_name"
+                <a-select show-search style="width:165px" v-model:value="createApp.repo_name"
                           placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in repoList"
@@ -160,7 +160,7 @@
                 label="开发语言"
                 name="lang"
                 :rules="[{ required: true, message: '请选择开发语言'}]">
-                <a-select show-search style="width: 140px" v-model:value="createApp.lang" placeholder="请选择">
+                <a-select show-search style="width: 165px" v-model:value="createApp.lang" placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in appLangList"
                         :key="index"
@@ -173,7 +173,7 @@
                 label="类型"
                 name="type"
                 :rules="[{ required: true, message: '请选择应用类型'}]">
-                <a-select show-search style="width: 140px" v-model:value="createApp.type" placeholder="请选择">
+                <a-select show-search style="width: 165px" v-model:value="createApp.type" placeholder="请选择">
                     <a-select-option
                         v-for="(item, index) in appTypeList"
                         :key="index"
@@ -192,7 +192,31 @@
                 label="描述"
                 name="description"
                 :rules="[{ required: true, message: '请输入应用描述' }]">
-                <a-textarea show-count :maxlength="20" v-model:value="createApp.description"/>
+                <a-textarea show-count :maxlength="0" v-model:value="createApp.description"/>
+            </a-form-item>
+            <a-form-item
+                label="创建 GitLab 仓库"
+                name="has_gitlab">
+                <a-switch v-model:checked="createApp.has_gitlab" />
+            </a-form-item>
+            <a-form-item
+                label="GitLab 仓库权限"
+                name="visibility"
+                v-show="createApp.has_gitlab">
+                <a-select show-search style="width:165px" size="small" v-model:value="createApp.visibility"
+                          placeholder="请选择">
+                    <a-select-option
+                        v-for="(item, index) in visibility"
+                        :key="index"
+                        :value="item">
+                        {{ item }}
+                    </a-select-option>
+                </a-select>
+            </a-form-item>
+            <a-form-item
+                label="创建 Pipeline 流水线"
+                name="has_jenkins">
+                <a-switch style="margin-right:20px;" v-model:checked="createApp.has_jenkins" />
             </a-form-item>
         </a-form>
         <template #footer>
@@ -203,7 +227,7 @@
 </template>
 
 <script>
-import {ref, reactive, createVNode} from 'vue'
+import {ref, reactive, createVNode, onMounted} from 'vue'
 import common from '@/config'
 import httpClient from '@/request'
 import {message, Modal} from 'ant-design-vue'
@@ -284,6 +308,7 @@ export default ({
         const appLangList = common.appLangList
         const appTypeList = common.appTypeList
         const repoList = common.repoList
+        const visibility = common.visibility
         //更新
         const updateRef = ref()
         const updateDrawer = ref(false)
@@ -310,7 +335,10 @@ export default ({
             lang: '',
             type: '',
             owner: '',
-            description: ''
+            description: '',
+            has_gitlab: false,
+            visibility: '',
+            has_jenkins: false
         })
         const createAppData = reactive({
             url: common.appAdd,
@@ -515,6 +543,13 @@ export default ({
             })
         }
 
+        onMounted(() => {
+            if (visibility.length > 0) {
+                createApp.visibility = visibility[0];
+            }
+        })
+
+
         // 返回数据
         return {
             appLoading,
@@ -541,6 +576,7 @@ export default ({
             createDrawer,
             createApp,
             role,
+            visibility,
         }
     }
 })

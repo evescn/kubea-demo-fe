@@ -317,8 +317,8 @@ export default ({
                     localStorage.setItem('cluster_num', clusterList.value.length)
                     //处理这个menu初始化的选择
                     if (!selectedKeys1.value.length) {
-                        selectedKeys1.value[0] = clusterList.value[1]
-                        localStorage.setItem('k8s_cluster', clusterList.value[1])
+                        selectedKeys1.value[0] = clusterList.value[0]
+                        localStorage.setItem('k8s_cluster', clusterList.value[0])
                     }
                 })
                 .catch(res => {
