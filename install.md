@@ -9,7 +9,7 @@
 ```shell
 $ git clone https://github.com/evescn/kubea-fe.git
 $ cd kubea-fe
-$ git checkout main
+$ git checkout master
 ```
 
 ### 打包镜像
