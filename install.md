@@ -30,7 +30,7 @@ $ docker push harbor.xxx.cn/devops/kubea-fe:v1.1
 
 ```shell
 $ chmod a+x ./build
-$ ./build 1 # 版本号信息
+$ ./build 1 dev # 版本号信息 环境
 ```
 
 ## 2. 服务部署
