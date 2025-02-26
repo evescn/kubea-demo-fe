@@ -1,18 +1,15 @@
+<script setup>
+</script>
+
 <template>
-  <!-- 路由占位符 -->
-  <router-view></router-view>
+  <div>
+    <!-- App.vue只需要留一个路由出口 router-view即可 -->
+    我是 app
+    <!-- <el-config-provider :locale="zhCn">
+      <router-view></router-view>
+    </el-config-provider> -->
+  </div>
+  <a-button type="primary" >按钮</a-button>
 </template>
 
-<style>
-  html, body {
-    /* 屏幕浏览器最大的宽和高 */
-    width: 100vw;
-    height: 100vh;
-    /* 最小宽度 */
-    min-width: 1425px;
-  }
-  #npogress .bar {
-    /* 自定义进度条颜色 */
-    background: #2186c0 !important;
-  }
-</style>
+<style scoped></style>

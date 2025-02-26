@@ -1,34 +1,35 @@
-# kubea-fe
+# Vue3-big-event-admin
 
-> `k8s` + `cicd` + 内网 `url` 导航 前端
+This template should help get you started developing with Vue 3 in Vite.
 
-## 项目安装文档 
+## Recommended IDE Setup
 
-[安装文档](install.md)
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
 
-## 应用管理
+## Customize configuration
 
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108105511675-811987874.png)
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250109131458992-1450712529.png)
+See [Vite Configuration Reference](https://vitejs.dev/config/).
 
-## 服务部署
+## Project Setup
 
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108105653285-1614982130.png)
+```sh
+pnpm install
+```
 
-## 服务地址
+### Compile and Hot-Reload for Development
 
-### 环境
+```sh
+pnpm dev
+```
 
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108105740078-1362051546.png)
+### Compile and Minify for Production
 
-### 公司服务
+```sh
+pnpm build
+```
 
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108105839871-506732583.png)
+### Lint with [ESLint](https://eslint.org/)
 
-## 容器服务
-
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108105947663-538041550.png)
-
-## 权限管理
-
-![img](https://img2023.cnblogs.com/blog/1021348/202501/1021348-20250108110011636-2046385347.png)
+```sh
+pnpm lint
+```
