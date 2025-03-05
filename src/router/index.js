@@ -9,44 +9,49 @@ import { usePermissionStore, useUserStore } from '@/stores'
 
 // vite 中的环境变量 import.meta.env.BASE_URL  就是 vite.config.js 中的 base 配置项
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  // history: createWebHashHistory(),
-  routes: [
-    { path: '/login', component: () => import('@/views/login/LoginPage.vue') }, // 登录页
-    {
-      path: '/',
-      redirect: '/application/list'
-    }
-  ]
+    history: createWebHistory(import.meta.env.BASE_URL),
+    // history: createWebHashHistory(),
+    routes: [
+        {
+            path: '/login',
+            component: () => import('@/views/login/LoginPage.vue')
+        }, // 登录页
+        {
+            path: '/',
+            redirect: '/application/list'
+        }
+    ]
 })
 
 //使用钩子函数对路由进行权限跳转
 router.beforeEach(async (to, from, next) => {
-  const store = usePermissionStore()
-  // 如果没有token, 且访问的是非登录页，拦截到登录，其他情况正常放行
-  const useStore = useUserStore()
-  if (to.path === '/login') {
-    console.log('123123')
-    next()
-  } else if (!useStore.token && to.path !== '/login') {
-    next('/login')
-  } else {
-    // 设置路由
+    const store = usePermissionStore()
+    // 如果没有token, 且访问的是非登录页，拦截到登录，其他情况正常放行
+    const useStore = useUserStore()
+    if (to.path === '/login') {
+        console.log('123123')
+        next()
+    } else if (!useStore.token && to.path !== '/login') {
+        next('/login')
+    } else {
+        // 设置路由
 
-    // const { setPermission, permission } = storeToRefs(store)
-    // console.log('111route-permission', store)
-    // console.log('222route-permission', store.permission)
-    if (!store.permission) {
-      await store.setPermission()
-      // console.log('333route-permission', store.permission)
-      store.getMenu.forEach((item) => {
-        router.addRoute(item)
-      })
-      console.log('router.getRoutes', router.getRoutes())
-      console.log(router)
+        // const { setPermission, permission } = storeToRefs(store)
+        // console.log('111route-permission', store)
+        // console.log('222route-permission', store.permission)
+        if (!store.permission) {
+            await store.setPermission()
+            // console.log('333route-permission', store.permission)
+            store.routes.forEach((item) => {
+                router.addRoute(item)
+            })
+            console.log('router.getRoutes', router.getRoutes())
+            console.log(router)
+            console.log('to', to)
+            next(to)
+        }
+        next()
     }
-    next()
-  }
 })
 
 export default router

@@ -14,6 +14,8 @@
   "dependencies": {
     "@vueup/vue-quill": "^1.2.0",
     "@vueuse/core": "^12.7.0",
+    "arco-dark.css": "link:@arco-design/web-vue/dist/arco-dark.css",
+    "arco.dark.css": "link:@arco-design/web-vue/dist/arco.dark.css",
     "axios": "^1.4.0",
     "jsonwebtoken": "^9.0.2",
     "pinia": "^2.1.3",

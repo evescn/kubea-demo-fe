@@ -5,13 +5,18 @@
                 <a-sub-menu :key="item.name" :index="item.name">
                     <template #title>{{ item.meta.title }}</template>
                     <template #icon>
-                        <i :class="['iconfont', item.meta.icon]"></i>
+                        <component :is="item.meta.icon" />
                     </template>
                     <AsideMenuItem :routes="item.children" />
                 </a-sub-menu>
             </template>
             <template v-else>
-                <a-menu-item v-if="item.hidden === 0" :key="item.name" @click="jumpTo(item.realPath)">
+                <a-menu-item
+                    v-if="item.hidden === 0"
+                    :key="item.name"
+                    @click="jumpTo(item.realPath)"
+                >
+                    <!--{{ item.meta.title  }}-->
                     {{ item.meta.title }}
                 </a-menu-item>
             </template>
@@ -19,18 +24,21 @@
     </div>
 </template>
 
-<script lang="ts" setup>
-import { useRouter } from 'vue-router';
-import type { Route } from '@/type/route';
+<script setup>
+import { useRouter } from 'vue-router'
 
-defineProps<{
-    routes: Route[];
-}>();
+const props = defineProps({
+    routes: {}
+})
+// defineProps<{
+//     routes
+// }>()
 
-const router = useRouter();
-const jumpTo = (path: string) => {
+const router = useRouter()
+const jumpTo = (path) => {
     router.push({
-        path,
-    });
-};
+        path
+    })
+    console.log(props.routes)
+}
 </script>

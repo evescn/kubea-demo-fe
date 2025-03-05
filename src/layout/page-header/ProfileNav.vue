@@ -1,13 +1,32 @@
-<template></template>
+<script setup>
+import { useUserStore } from '@/stores'
+import { useRouter } from 'vue-router'
 
-<script setup></script>
+const router = useRouter()
+const userStore = useUserStore()
 
-<style scoped>
-.profile-box {
-  cursor: pointer;
+// 退出登陆
+const logout = () => {
+    userStore.removeToken()
+
+    // 移除 roleId
+    // localStorage.removeItem('role')
+    // 移除环境信息
+    // localStorage.removeItem('urlEnv')
+    // localStorage.removeItem('urlEnvID')
+
+    // 跳转到 /login 页面
+    router.push('/login')
 }
+</script>
 
-.avatar {
-  margin-right: 8px;
-}
-</style>
+<template>
+    <a-menu>
+        <a-menu-item>
+            <a @click="logout()">退出登陆</a>
+        </a-menu-item>
+        <a-menu-item>
+            <a @click="changePassword()">修改密码</a>
+        </a-menu-item>
+    </a-menu>
+</template>

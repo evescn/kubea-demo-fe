@@ -15,19 +15,19 @@
     </div>
 </template>
 
-<script lang="ts" setup>
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const route = useRoute();
-const breadcrumbs = route.meta.breadcrumbs as string[];
+const route = useRoute()
+const breadcrumbs = route.meta.breadcrumbs
 const titleList = computed(() => {
-    return route.matched.filter((route) => route.meta.title).map((route) => route.meta.title);
-});
-const list: string[] = breadcrumbs || titleList;
+    return route.matched.filter((route) => route.meta.title).map((route) => route.meta.title)
+})
+const list = breadcrumbs || titleList
 </script>
 
-<style scoped lang="less">
+<style lang="less" scoped>
 .container-breadcrumb {
     padding: 10px;
 }

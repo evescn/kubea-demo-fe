@@ -1,23 +1,23 @@
 <template>
-    <a-menu class="aside-menu" auto-open-selected :selected-keys="selectedKey">
+    <a-menu :selected-keys="selectedKey" auto-open-selected class="aside-menu">
         <AsideMenuItem :routes="routes" />
     </a-menu>
 </template>
 
 <script lang="ts" setup>
-import { ref, toRefs, watchEffect } from 'vue';
-import { useRoute } from 'vue-router';
-import { usePermissionStore } from '@/store/permission';
-import AsideMenuItem from './AsideMenuItem.vue';
+import { ref, toRefs, watchEffect } from 'vue'
+import { useRoute } from 'vue-router'
+import { usePermissionStore } from '@/stores'
+import AsideMenuItem from './AsideMenuItem.vue'
 
-const route = useRoute();
-const { routes } = toRefs(usePermissionStore());
+const route = useRoute()
+const { routes } = toRefs(usePermissionStore())
 
-const selectedKey = ref<string[]>([]);
+const selectedKey = ref([])
 
 watchEffect(() => {
-    selectedKey.value = [route.name as string];
-});
+    selectedKey.value = [route.name]
+})
 </script>
 
 <style scoped>
