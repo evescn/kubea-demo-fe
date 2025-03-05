@@ -23,7 +23,7 @@
 
 <style scoped>
 .home-row1 {
-    background-color: rgb(40, 46, 58) !important;
+    background-color: rgb(33, 54, 96) !important;
     padding: 20px;
     margin-bottom: 15px;
 }

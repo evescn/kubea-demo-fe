@@ -30,7 +30,7 @@ onMounted(() => {
     <a-row :gutter="10">
         <template v-for="(val, key) in resourceList" :key="key">
             <a-col :span="4" style="margin-bottom: 10px">
-                <a-card :bodyStyle="{ padding: '10px' }" :bordered="false" style="background-color: rgb(33, 46, 64)">
+                <a-card :bodyStyle="{ padding: '10px' }" :bordered="false" style="background-color: rgb(26, 44, 69)">
                     <div style="display: flex; align-items: center; flex-wrap: nowrap">
                         <div style="margin: 15px 10px 0px 10px">
                             <!-- 进度条组件 strokeWidth 是线条的粗细 -->
